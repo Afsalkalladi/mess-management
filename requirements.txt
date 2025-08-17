@@ -18,7 +18,7 @@ cryptography==41.0.7
 # Task Queue
 celery==5.3.4
 redis==5.0.1
-django-celery-beat==2.5.0
+django-celery-beat==2.8.1
 
 # Cloud Storage
 cloudinary==1.36.0

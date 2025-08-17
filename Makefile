@@ -116,7 +116,7 @@ clean:
 
 # Initialize project
 init:
-	cp .env.example .env
+	
 	@echo "Please edit .env file with your configuration"
 	make build
 	make up
