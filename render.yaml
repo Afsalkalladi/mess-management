@@ -1,0 +1,118 @@
+services:
+  # Redis for Celery
+  - type: redis
+    name: mess-redis
+    plan: free
+    region: oregon
+
+  # Django Web Service
+  - type: web
+    name: mess-web
+    runtime: python3
+    region: oregon
+    plan: free
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 4"
+    healthCheckPath: "/health/"
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.7"
+      - key: DATABASE_URL
+        sync: false # Set this in Render dashboard from Supabase
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: mess-redis
+          property: connectionString
+      - key: DEBUG
+        value: "False"
+      - key: DJANGO_SETTINGS_MODULE
+        value: "config.settings"
+      - key: DJANGO_SECRET_KEY
+        sync: false # Set this in Render dashboard
+      - key: ALLOWED_HOSTS
+        value: "mess-web.onrender.com,localhost" # Update with your actual domain
+      - key: TIMEZONE
+        value: "Asia/Kolkata"
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false # Set this in Render dashboard
+      - key: CLOUDINARY_URL
+        sync: false # Set this in Render dashboard
+      - key: GOOGLE_SHEETS_CREDENTIALS_JSON
+        sync: false # Set this in Render dashboard
+      - key: QR_SECRET
+        sync: false # Set this in Render dashboard
+    disk:
+      name: mess-static
+      mountPath: /app/staticfiles
+      sizeGB: 1
+
+  # Celery Worker
+  - type: worker
+    name: mess-celery-worker
+    runtime: python3
+    region: oregon
+    plan: free
+    buildCommand: "./build.sh"
+    startCommand: "celery -A config worker -l info -Q default,notifications,sheets,qr --concurrency=2"
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.7"
+      - key: DATABASE_URL
+        sync: false # Set this in Render dashboard from Supabase
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: mess-redis
+          property: connectionString
+      - key: DEBUG
+        value: "False"
+      - key: DJANGO_SETTINGS_MODULE
+        value: "config.settings"
+      - key: C_FORCE_ROOT
+        value: "1"
+      - key: DJANGO_SECRET_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: GOOGLE_SHEETS_CREDENTIALS_JSON
+        sync: false
+      - key: QR_SECRET
+        sync: false
+
+  # Celery Beat Scheduler
+  - type: worker
+    name: mess-celery-beat
+    runtime: python3
+    region: oregon
+    plan: free
+    buildCommand: "./build.sh"
+    startCommand: "celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.7"
+      - key: DATABASE_URL
+        sync: false # Set this in Render dashboard from Supabase
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: mess-redis
+          property: connectionString
+      - key: DEBUG
+        value: "False"
+      - key: DJANGO_SETTINGS_MODULE
+        value: "config.settings"
+      - key: C_FORCE_ROOT
+        value: "1"
+      - key: DJANGO_SECRET_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: GOOGLE_SHEETS_CREDENTIALS_JSON
+        sync: false
+      - key: QR_SECRET
+        sync: false

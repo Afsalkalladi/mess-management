@@ -1,6 +1,7 @@
 """
 Django settings for Mess Management System
 Production-ready configuration with security best practices
+Optimized for Render deployment
 """
 
 import os
@@ -23,7 +24,12 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # Security
 SECRET_KEY = env('DJANGO_SECRET_KEY')
 DEBUG = env('DEBUG')
+
+# Render-optimized ALLOWED_HOSTS
+RENDER_EXTERNAL_HOSTNAME = env('RENDER_EXTERNAL_HOSTNAME', default='')
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost'])
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # Application definition
 INSTALLED_APPS = [
@@ -75,12 +81,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database
+# Database - Optimized for Render with connection pooling
 DATABASES = {
     'default': dj_database_url.config(
         default=env('DATABASE_URL'),
-        conn_max_age=600,
+        conn_max_age=600,  # Connection pooling
         conn_health_checks=True,
+        ssl_require=True,  # Required for Supabase
     )
 }
 
@@ -98,10 +105,14 @@ TIME_ZONE = env('TIMEZONE', default='Asia/Kolkata')
 USE_I18N = True
 USE_TZ = True
 
-# Static files
-STATIC_URL = 'static/'
+# Static files - Optimized for Render
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Media files (for Cloudinary)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -130,11 +141,13 @@ REST_FRAMEWORK = {
     }
 }
 
-# CORS
+# CORS - Render optimized
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[])
 CORS_ALLOW_CREDENTIALS = True
+if RENDER_EXTERNAL_HOSTNAME:
+    CORS_ALLOWED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
 
-# Celery Configuration
+# Celery Configuration - Render optimized
 CELERY_BROKER_URL = env('REDIS_URL')
 CELERY_RESULT_BACKEND = env('REDIS_URL')
 CELERY_ACCEPT_CONTENT = ['json']
@@ -143,9 +156,17 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
+# Celery optimizations for Render free tier
+CELERY_WORKER_CONCURRENCY = 2  # Limit concurrency for free tier
+CELERY_TASK_ALWAYS_EAGER = DEBUG  # Run tasks synchronously in development
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_RESULT_EXPIRES = 3600  # 1 hour
+
 # Telegram Configuration
 TELEGRAM_BOT_TOKEN = env('TELEGRAM_BOT_TOKEN')
 TELEGRAM_WEBHOOK_URL = env('TELEGRAM_WEBHOOK_URL', default='')
+if RENDER_EXTERNAL_HOSTNAME and not TELEGRAM_WEBHOOK_URL:
+    TELEGRAM_WEBHOOK_URL = f"https://{RENDER_EXTERNAL_HOSTNAME}/telegram/webhook/"
 ADMIN_TG_IDS = env.list('ADMIN_TG_IDS', cast=int, default=[])
 
 # Cloudinary Configuration
@@ -169,7 +190,7 @@ MEAL_TIMINGS = {
 # Mess Cut Configuration
 MESS_CUT_CUTOFF_TIME = '23:00'  # 11:00 PM IST
 
-# Security Settings
+# Security Settings - Render compatible
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
@@ -180,6 +201,8 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+    # Render uses proxies, so we need to trust them
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Sentry Error Tracking
 if env('SENTRY_DSN', default=None):
@@ -191,7 +214,7 @@ if env('SENTRY_DSN', default=None):
         environment='production' if not DEBUG else 'development'
     )
 
-# Logging Configuration
+# Logging Configuration - Render optimized
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -200,34 +223,39 @@ LOGGING = {
             'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
+        'simple': {
+            'format': '{levelname} {asctime} {message}',
+            'style': '{',
+        },
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose'
-        },
-        'file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': 'logs/django.log',
-            'maxBytes': 1024*1024*15,  # 15MB
-            'backupCount': 10,
-            'formatter': 'verbose',
+            'formatter': 'simple' if not DEBUG else 'verbose'
         },
     },
     'root': {
-        'handlers': ['console', 'file'],
+        'handlers': ['console'],
         'level': 'INFO' if not DEBUG else 'DEBUG',
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
         'mess': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+        'celery': {
+            'handlers': ['console'],
+            'level': 'INFO',
             'propagate': False,
         },
     },
 }
+
+# Health check endpoint
+HEALTH_CHECK_URL = '/health/'
