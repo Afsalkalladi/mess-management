@@ -1,0 +1,306 @@
+{% extends 'base.html' %}
+
+// Toggle manual input
+function toggleManualInput() {
+    const manualDiv = document.getElementById('manual-input');
+    manualDiv.classList.toggle('hidden');
+    if (!manualDiv.classList.contains('hidden')) {
+        document.getElementById('manual-qr').focus();
+    }
+}
+
+// Process manual QR
+function processManualQR() {
+    const qrData = document.getElementById('manual-qr').value.trim();
+    if (qrData) {
+        processQRCode(qrData);
+        document.getElementById('manual-qr').value = '';
+        document.getElementById('manual-input').classList.add('hidden');
+    }
+}
+
+// Initialize on load
+window.addEventListener('load', () => {
+    initCamera();
+    
+    // Handle Enter key in manual input
+    document.getElementById('manual-qr').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            processManualQR();
+        }
+    });
+});
+
+// Handle visibility change
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        scanning = false;
+    } else {
+        scanning = true;
+    }
+});
+</script>
+{% endblock %}
+
+{% block title %}QR Scanner - Mess Management{% endblock %}
+
+{% block content %}
+<!-- Navigation -->
+<div class="nav-bar">
+    <a href="{% url 'mess:scanner-main' %}" class="nav-item active">📷 Scan</a>
+    <a href="{% url 'mess:scanner-manual' %}" class="nav-item">⌨️ Manual</a>
+    <a href="{% url 'mess:scanner-stats' %}" class="nav-item">📊 Stats</a>
+    <a href="{% url 'mess:scanner-logout' %}" class="nav-item">🚪 Logout</a>
+</div>
+
+<div class="card">
+    <div class="header">
+        <h1>📷 QR Scanner</h1>
+        <p>{{ staff_label }} | Point camera at student QR code</p>
+    </div>
+    
+    <!-- Meal Selection -->
+    <div class="form-group">
+        <label for="meal">Select Meal</label>
+        <select id="meal" class="form-control">
+            {% for meal in meals %}
+            <option value="{{ meal }}" {% if meal == current_meal %}selected{% endif %}>
+                {% if meal == 'BREAKFAST' %}🌅{% elif meal == 'LUNCH' %}☀️{% else %}🌙{% endif %}
+                {{ meal }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <!-- Scanner -->
+    <div class="scanner-container">
+        <video id="video" playsinline></video>
+        <div class="scan-region">
+            <div class="scan-line"></div>
+        </div>
+        <canvas id="canvas" style="display: none;"></canvas>
+    </div>
+    
+    <!-- Result Display -->
+    <div id="result-container"></div>
+    
+    <!-- Manual Input Fallback -->
+    <div style="margin-top: 20px;">
+        <button onclick="toggleManualInput()" class="btn btn-secondary">
+            Enter Code Manually
+        </button>
+    </div>
+    
+    <div id="manual-input" class="hidden" style="margin-top: 15px;">
+        <input 
+            type="text" 
+            id="manual-qr" 
+            class="form-control" 
+            placeholder="Paste QR code data here"
+            style="margin-bottom: 10px;"
+        >
+        <button onclick="processManualQR()" class="btn">
+            Process QR
+        </button>
+    </div>
+</div>
+
+<!-- Status Card -->
+<div class="card" style="background: rgba(255,255,255,0.9);">
+    <div style="text-align: center;">
+        <span id="status-indicator" style="color: #48bb78;">● Scanner Active</span>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script>
+// Global variables
+let video = document.getElementById('video');
+let canvas = document.getElementById('canvas');
+let ctx = canvas.getContext('2d');
+let scanning = true;
+let lastScannedCode = null;
+let scanCooldown = false;
+
+// Initialize camera
+async function initCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+                facingMode: 'environment',
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        });
+        
+        video.srcObject = stream;
+        video.play();
+        
+        video.addEventListener('loadedmetadata', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            scanQRCode();
+        });
+        
+    } catch (err) {
+        console.error('Camera error:', err);
+        alert('Unable to access camera. Please check permissions or use manual input.');
+        document.getElementById('status-indicator').textContent = '● Camera Error';
+        document.getElementById('status-indicator').style.color = '#f56565';
+    }
+}
+
+// Scan QR code
+function scanQRCode() {
+    if (!scanning) {
+        requestAnimationFrame(scanQRCode);
+        return;
+    }
+    
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    
+    if (code && !scanCooldown) {
+        console.log('QR Code detected:', code.data);
+        
+        // Prevent duplicate scans
+        if (code.data === lastScannedCode) {
+            requestAnimationFrame(scanQRCode);
+            return;
+        }
+        
+        lastScannedCode = code.data;
+        processQRCode(code.data);
+        
+        // Set cooldown
+        scanCooldown = true;
+        setTimeout(() => {
+            scanCooldown = false;
+            lastScannedCode = null;
+        }, 3000);
+    }
+    
+    requestAnimationFrame(scanQRCode);
+}
+
+// Process QR code
+async function processQRCode(qrData) {
+    scanning = false;
+    const meal = document.getElementById('meal').value;
+    
+    // Show processing state
+    showProcessing();
+    
+    try {
+        const response = await fetch('{% url "mess:scanner-process" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                qr_data: qrData,
+                meal: meal,
+                device_info: navigator.userAgent
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showResult(data);
+        } else {
+            showError(data.error || 'Invalid QR code');
+        }
+        
+    } catch (err) {
+        console.error('Process error:', err);
+        showError('Network error. Please try again.');
+    }
+    
+    // Resume scanning after delay
+    setTimeout(() => {
+        scanning = true;
+        document.getElementById('result-container').innerHTML = '';
+    }, 4000);
+}
+
+// Show processing state
+function showProcessing() {
+    document.getElementById('result-container').innerHTML = `
+        <div class="result-card" style="background: #667eea; color: white;">
+            <div class="loading"></div>
+            <p style="margin-top: 10px;">Processing...</p>
+        </div>
+    `;
+}
+
+// Show result
+function showResult(data) {
+    const isAllowed = data.result === 'ALLOWED';
+    const student = data.student;
+    
+    // Play sound
+    playSound(isAllowed);
+    
+    // Vibrate if supported
+    if (navigator.vibrate) {
+        navigator.vibrate(isAllowed ? 200 : [100, 50, 100]);
+    }
+    
+    document.getElementById('result-container').innerHTML = `
+        <div class="result-card ${isAllowed ? 'result-success' : 'result-blocked'}">
+            <div class="result-icon">
+                ${isAllowed ? '✅' : '❌'}
+            </div>
+            <div class="result-name">${student.name}</div>
+            <div class="result-details">Roll: ${student.roll_no}</div>
+            <div class="result-details">Room: ${student.room_no}</div>
+            <div class="result-details" style="margin-top: 10px; font-weight: bold;">
+                ${data.message}
+            </div>
+            ${data.timestamp ? `<div class="result-details" style="opacity: 0.8; margin-top: 10px;">Scanned at ${data.timestamp}</div>` : ''}
+        </div>
+    `;
+}
+
+// Show error
+function showError(message) {
+    document.getElementById('result-container').innerHTML = `
+        <div class="result-card result-blocked">
+            <div class="result-icon">⚠️</div>
+            <div class="result-name">Error</div>
+            <div class="result-details">${message}</div>
+        </div>
+    `;
+    
+    // Play error sound
+    playSound(false);
+}
+
+// Play sound feedback
+function playSound(success) {
+    try {
+        const context = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = context.createOscillator();
+        const gainNode = context.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(context.destination);
+        
+        if (success) {
+            oscillator.frequency.value = 800;
+            gainNode.gain.value = 0.3;
+        } else {
+            oscillator.frequency.value = 300;
+            gainNode.gain.value = 0.3;
+        }
+        
+        oscillator.start();
+        oscillator.stop(context.currentTime + 0.2);
+    } catch (e) {
+        console.log('Audio not supported');
+    }

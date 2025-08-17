@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Manual Entry - Mess Scanner{% endblock %}
+
+{% block content %}
+<!-- Navigation -->
+<div class="nav-bar">
+    <a href="{% url 'mess:scanner-main' %}" class="nav-item">📷 Scan</a>
+    <a href="{% url 'mess:scanner-manual' %}" class="nav-item active">⌨️ Manual</a>
+    <a href="{% url 'mess:scanner-stats' %}" class="nav-item">📊 Stats</a>
+    <a href="{% url 'mess:scanner-logout' %}" class="nav-item">🚪 Logout</a>
+</div>
+
+<div class="card">
+    <div class="header">
+        <h1>⌨️ Manual Entry</h1>
+        <p>Enter student roll number when QR scan is not possible</p>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="roll_no">Roll Number</label>
+            <input 
+                type="text" 
+                id="roll_no" 
+                name="roll_no" 
+                class="form-control" 
+                placeholder="e.g., 20CS001"
+                required
+                autofocus
+                style="text-transform: uppercase;"
+            >
+        </div>
+        
+        <div class="form-group">
+            <label for="meal">Meal</label>
+            <select id="meal" name="meal" class="form-control">
+                {% for meal in meals %}
+                <option value="{{ meal }}" {% if meal == current_meal %}selected{% endif %}>
+                    {% if meal == 'BREAKFAST' %}🌅{% elif meal == 'LUNCH' %}☀️{% else %}🌙{% endif %}
+                    {{ meal }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <button type="submit" class="btn">
+            Process Entry
+        </button>
+    </form>
+</div>
+
+<div class="card" style="background: rgba(255,255,255,0.9);">
+    <h3 style="margin-bottom: 15px; color: #667eea;">⚡ Quick Access</h3>
+    <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+        Use manual entry only when:
+    </p>
+    <ul style="color: #666; font-size: 14px; padding-left: 20px;">
+        <li>QR code is damaged</li>
+        <li>Camera is not working</li>
+        <li>Student forgot their QR</li>
+        <li>Emergency access needed</li>
+    </ul>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-uppercase roll number
+document.getElementById('roll_no').addEventListener('input', function(e) {
+    e.target.value = e.target.value.toUpperCase();
+});
+
+// Show loading on submit
+document.querySelector('form').addEventListener('submit', function(e) {
+    const btn = this.querySelector('button[type="submit"]');
+    btn.innerHTML = '<span class="loading"></span> Processing...';
+    btn.disabled = true;
+});
+</script>
+{% endblock %}

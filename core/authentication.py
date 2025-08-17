@@ -8,8 +8,6 @@ from django.conf import settings
 import hashlib
 import logging
 
-from .models import StaffToken
-
 logger = logging.getLogger(__name__)
 
 
@@ -48,6 +46,9 @@ class StaffTokenAuthentication(authentication.BaseAuthentication):
         """
         Authenticate the token
         """
+        # Import here to avoid circular imports
+        from mess.models import StaffToken
+        
         # Hash the token to compare with database
         token_hash = hashlib.sha256(key.encode()).hexdigest()
         

@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block title %}Statistics - Mess Scanner{% endblock %}
+
+{% block content %}
+<!-- Navigation -->
+<div class="nav-bar">
+    <a href="{% url 'scanner:main' %}" class="nav-item">📷 Scan</a>
+    <a href="{% url 'scanner:manual' %}" class="nav-item">⌨️ Manual</a>
+    <a href="{% url 'scanner:stats' %}" class="nav-item active">📊 Stats</a>
+    <a href="{% url 'scanner:logout' %}" class="nav-item">🚪 Logout</a>
+</div>
+
+<div class="card">
+    <div class="header">
+        <h1>📊 Today's Statistics</h1>
+        <p>{{ now|date:"l, F j, Y" }}</p>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.total_today }}</div>
+            <div class="stat-label">Total Scans</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value" style="color: #48bb78;">{{ stats.allowed }}</div>
+            <div class="stat-label">Allowed</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value" style="color: #f56565;">{{ stats.blocked }}</div>
+            <div class="stat-label">Blocked</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value" style="color: #ed8936;">
+                {{ stats.allowed|floatformat:0 }}%
+            </div>
+            <div class="stat-label">Success Rate</div>
+        </div>
+    </div>
+    
+    <h3 style="margin-top: 30px; margin-bottom: 15px; color: #667eea;">Meal Distribution</h3>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.breakfast }}</div>
+            <div class="stat-label">🌅 Breakfast</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.lunch }}</div>
+            <div class="stat-label">☀️ Lunch</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">{{ stats.dinner }}</div>
+            <div class="stat-label">🌙 Dinner</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">
+                {% now "H:i" %}
+            </div>
+            <div class="stat-label">Current Time</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="margin-bottom: 20px; color: #667eea;">📜 Recent Scans</h3>
+    
+    {% if recent_scans %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; font-size: 14px;">
+            <thead>
+                <tr style="border-bottom: 2px solid #e2e8f0;">
+                    <th style="text-align: left; padding: 10px;">Time</th>
+                    <th style="text-align: left; padding: 10px;">Student</th>
+                    <th style="text-align: left; padding: 10px;">Meal</th>
+                    <th style="text-align: left; padding: 10px;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for scan in recent_scans %}
+                <tr style="border-bottom: 1px solid #f7fafc;">
+                    <td style="padding: 10px;">{{ scan.scanned_at|date:"H:i" }}</td>
+                    <td style="padding: 10px;">
+                        {{ scan.student.name }}<br>
+                        <small style="color: #666;">{{ scan.student.roll_no }}</small>
+                    </td>
+                    <td style="padding: 10px;">
+                        {% if scan.meal == 'BREAKFAST' %}🌅{% elif scan.meal == 'LUNCH' %}☀️{% else %}🌙{% endif %}
+                        {{ scan.meal|title }}
+                    </td>
+                    <td style="padding: 10px;">
+                        {% if scan.result == 'ALLOWED' %}
+                            <span style="color: #48bb78;">✅ Allowed</span>
+                        {% else %}
+                            <span style="color: #f56565;">❌ Blocked</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="text-align: center; color: #666; padding: 20px;">
+        No scans yet today
+    </p>
+    {% endif %}
+</div>
+
+<!-- Refresh button -->
+<div style="text-align: center; margin-top: 20px;">
+    <button onclick="location.reload()" class="btn btn-secondary">
+        🔄 Refresh Stats
+    </button>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh every 30 seconds
+setTimeout(() => {
+    location.reload();
+}, 30000);
+
+// Calculate success rate
+document.addEventListener('DOMContentLoaded', () => {
+    const total = {{ stats.total_today }};
+    const allowed = {{ stats.allowed }};
+    
+    if (total > 0) {
+        const rate = Math.round((allowed / total) * 100);
+        document.querySelector('.stat-card:nth-child(4) .stat-value').textContent = rate + '%';
+    } else {
+        document.querySelector('.stat-card:nth-child(4) .stat-value').textContent = '0%';
+    }
+});
+</script>
+{% endblock %}
