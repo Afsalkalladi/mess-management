@@ -17,7 +17,7 @@ import logging
 
 from .models import StaffToken, Student, ScanEvent
 from .serializers import QRScanSerializer, StudentSnapshotSerializer
-from .utils import get_current_meal
+from core.utils import get_current_meal
 
 logger = logging.getLogger(__name__)
 

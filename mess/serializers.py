@@ -12,7 +12,7 @@ from .models import (
     ScanEvent, StudentStatus, PaymentStatus,
     MealType, ScanResult
 )
-from .utils import validate_qr_payload, get_current_meal
+from core.utils import validate_qr_payload, get_current_meal
 
 
 class StudentRegistrationSerializer(serializers.ModelSerializer):

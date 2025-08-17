@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 
 from .models import Student, Payment, MessCut, StudentStatus, PaymentStatus
-from .utils import generate_qr_code, parse_telegram_date, is_within_cutoff_time
+from core.utils import generate_qr_code, parse_telegram_date, is_within_cutoff_time
 from .tasks import send_telegram_notification, sync_to_google_sheets
 
 logger = logging.getLogger(__name__)

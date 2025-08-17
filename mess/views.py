@@ -24,7 +24,7 @@ from .serializers import (
     QRScanSerializer, ReportSerializer,
     AdminActionSerializer, BulkQRRegenerateSerializer
 )
-from .permissions import IsAdmin, IsStaff
+from core.permissions import IsAdmin, IsStaff
 from .tasks import (
     send_telegram_notification, sync_to_google_sheets,
     process_qr_regeneration
