@@ -27,6 +27,9 @@ RUN pip install --upgrade pip && \
 # Production stage
 FROM python:3.11-slim
 
+# Set a temporary secret key for build-time operations only
+ENV DJANGO_SECRET_KEY="build-time-secret-key-not-for-production"
+
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \

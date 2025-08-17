@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # PostgreSQL Database
@@ -13,16 +13,18 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mess_user"]
+      test: ["CMD-SHELL", "pg_isready -U mess_user -d mess_db"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - app-network
 
   # Redis for Celery
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
     volumes:
       - redis_data:/data
     ports:
@@ -33,15 +35,17 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - app-network
 
   # Django Application
   web:
     build:
       context: .
       dockerfile: Dockerfile
-    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4
+    # Remove command override since it's already in Dockerfile
     volumes:
-      - .:/app
+      # Remove .:/app in production for security
       - static_volume:/app/staticfiles
       - media_volume:/app/media
       - logs_volume:/app/logs
@@ -49,30 +53,64 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      # Override build-time secret key
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DATABASE_URL=postgresql://mess_user:${DB_PASSWORD:-changeme}@db:5432/mess_db
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/0
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import requests; requests.get('http://localhost:8000/health/', timeout=10)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
+    networks:
+      - app-network
 
   # Celery Worker
   celery_worker:
     build:
       context: .
       dockerfile: Dockerfile
-    command: celery -A config worker -l info -Q default,notifications,sheets,qr
+    command: celery -A config worker -l info -Q default,notifications,sheets,qr --concurrency=2
     volumes:
-      - .:/app
       - logs_volume:/app/logs
+      # Remove .:/app in production
     env_file:
       - .env
+    environment:
+      - DATABASE_URL=postgresql://mess_user:${DB_PASSWORD:-changeme}@db:5432/mess_db
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/0
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "celery", "-A", "config", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
+    networks:
+      - app-network
 
   # Celery Beat Scheduler
   celery_beat:
@@ -81,30 +119,54 @@ services:
       dockerfile: Dockerfile
     command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
-      - .:/app
       - logs_volume:/app/logs
+      # Remove .:/app in production
     env_file:
       - .env
+    environment:
+      - DATABASE_URL=postgresql://mess_user:${DB_PASSWORD:-changeme}@db:5432/mess_db
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/0
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+      web:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - app-network
 
   # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - static_volume:/static
-      - media_volume:/media
+      - static_volume:/static:ro
+      - media_volume:/media:ro
     ports:
       - "80:80"
       - "443:443"
     depends_on:
-      - web
+      web:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost/health/",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     restart: unless-stopped
+    networks:
+      - app-network
 
 volumes:
   postgres_data:
@@ -112,3 +174,7 @@ volumes:
   static_volume:
   media_volume:
   logs_volume:
+
+networks:
+  app-network:
+    driver: bridge
