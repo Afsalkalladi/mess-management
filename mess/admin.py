@@ -164,7 +164,7 @@ class MessClosureAdmin(admin.ModelAdmin):
 class ScanEventAdmin(admin.ModelAdmin):
     """Admin interface for ScanEvent model"""
     
-    list_display = ['student_roll', 'meal', 'result', 'scanned_at', 'staff_token']
+    list_display = ['student_roll', 'meal', 'result', 'scanned_at', 'staff_token_id']
     list_filter = ['meal', 'result', 'scanned_at']
     search_fields = ['student__name', 'student__roll_no']
     date_hierarchy = 'scanned_at'
