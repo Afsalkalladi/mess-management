@@ -1,3 +1,6 @@
+# Minimal requirements for basic functionality
+# Use this if the full requirements.txt fails
+
 # Core Framework
 Django==5.0.1
 djangorestframework==3.14.0
@@ -13,34 +16,14 @@ python-telegram-bot==21.0.1
 
 # Authentication & Security
 PyJWT==2.8.0
-cryptography==42.0.8
 
-# Task Queue
-celery==5.3.4
-redis==5.0.1
-django-celery-beat==2.8.1
-
-# Cloud Storage
-cloudinary==1.36.0
-
-# Google Sheets API
-google-auth==2.34.0
-google-auth-oauthlib==1.2.1
-google-auth-httplib2==0.2.0
-google-api-python-client==2.147.0
-
-# QR Code Generation
-qrcode[pil]==7.4.2
-Pillow==10.4.0
+# QR Code Generation (without Pillow initially)
+qrcode==7.4.2
 
 # Utilities
 python-dateutil==2.8.2
-pytz==2024.1
 requests==2.32.3
 
 # Production Server
 gunicorn==22.0.0
 whitenoise==6.7.0
-
-# Monitoring
-sentry-sdk==2.14.0

@@ -7,8 +7,19 @@ set -o errexit  # exit on error
 echo "Installing system dependencies..."
 apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    g++ \
     libpq-dev \
-    netcat-traditional
+    netcat-traditional \
+    libjpeg-dev \
+    zlib1g-dev \
+    libfreetype6-dev \
+    liblcms2-dev \
+    libopenjp2-7-dev \
+    libtiff5-dev \
+    tk-dev \
+    libharfbuzz-dev \
+    libfribidi-dev \
+    libxcb1-dev
 
 # Upgrade pip
 echo "Upgrading pip..."
@@ -16,7 +27,32 @@ pip install --upgrade pip
 
 # Install Python dependencies
 echo "Installing Python dependencies..."
-pip install -r requirements.txt
+# Install wheel first for better package building
+pip install wheel setuptools
+
+# Try to install packages with better error handling
+echo "Attempting to install all dependencies..."
+if ! pip install -r requirements.txt --no-cache-dir; then
+    echo "Full installation failed, trying minimal requirements..."
+
+    # Use minimal requirements as fallback
+    if pip install -r requirements-minimal.txt --no-cache-dir; then
+        echo "Minimal requirements installed successfully"
+
+        # Try to add Pillow separately
+        echo "Attempting to install Pillow for QR code images..."
+        pip install Pillow==10.4.0 --no-cache-dir || echo "Pillow installation failed, QR codes will be text-only"
+
+        # Try to add optional packages
+        echo "Installing optional packages..."
+        pip install celery==5.3.4 redis==5.0.1 || echo "Celery/Redis installation failed, background tasks disabled"
+        pip install cloudinary==1.36.0 || echo "Cloudinary installation failed, file uploads may not work"
+        pip install sentry-sdk==2.14.0 || echo "Sentry installation failed, error monitoring disabled"
+    else
+        echo "Even minimal installation failed, this may cause issues"
+        exit 1
+    fi
+fi
 
 # Collect static files
 echo "Collecting static files..."
