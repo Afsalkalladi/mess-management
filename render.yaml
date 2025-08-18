@@ -12,7 +12,7 @@ services:
     region: oregon
     plan: free
     buildCommand: "./build.sh"
-    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 4"
+    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --max-requests 1000 --max-requests-jitter 100"
     healthCheckPath: "/health/"
     envVars:
       - key: PYTHON_VERSION
@@ -31,7 +31,7 @@ services:
       - key: DJANGO_SECRET_KEY
         sync: false # Set this in Render dashboard
       - key: ALLOWED_HOSTS
-        value: "mess-web.onrender.com,localhost" # Update with your actual domain
+        value: "mess-management-kbnr.onrender.com,localhost,127.0.0.1"
       - key: TIMEZONE
         value: "Asia/Kolkata"
       - key: TELEGRAM_BOT_TOKEN
@@ -42,6 +42,12 @@ services:
         sync: false # Set this in Render dashboard
       - key: QR_SECRET
         sync: false # Set this in Render dashboard
+      - key: DJANGO_SUPERUSER_USERNAME
+        sync: false # Optional: Set to create admin user automatically
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false # Optional: Set to create admin user automatically
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false # Optional: Set admin email
     disk:
       name: mess-static
       mountPath: /app/staticfiles
