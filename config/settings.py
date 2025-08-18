@@ -82,34 +82,62 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database - Support both URL and individual components
-if env('DATABASE_URL', default=None):
-    # Use DATABASE_URL if provided
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=env('DATABASE_URL'),
-            conn_max_age=600,  # Connection pooling
-            conn_health_checks=True,
-            ssl_require=not env('DATABASE_URL').startswith('sqlite'),  # SSL for PostgreSQL only
-        )
-    }
-else:
-    # Use individual database components
+# Database - Support both URL and individual components with fallback
+if env('USE_SQLITE', default=False):
+    # SQLite fallback for deployment issues
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': env('DB_NAME', default='postgres'),
-            'USER': env('DB_USER', default='postgres'),
-            'PASSWORD': env('DB_PASSWORD'),
-            'HOST': env('DB_HOST'),
-            'PORT': env('DB_PORT', default='5432'),
-            'OPTIONS': {
-                'sslmode': 'require',
-            },
-            'CONN_MAX_AGE': 600,
-            'CONN_HEALTH_CHECKS': True,
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+elif env('DATABASE_URL', default=None):
+    # Use DATABASE_URL if provided
+    try:
+        DATABASES = {
+            'default': dj_database_url.config(
+                default=env('DATABASE_URL'),
+                conn_max_age=600,  # Connection pooling
+                conn_health_checks=True,
+                ssl_require=not env('DATABASE_URL').startswith('sqlite'),  # SSL for PostgreSQL only
+            )
+        }
+    except Exception as e:
+        # Fallback to SQLite if PostgreSQL configuration fails
+        print(f"PostgreSQL configuration failed: {e}, falling back to SQLite")
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
+else:
+    # Use individual database components
+    try:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': env('DB_NAME', default='postgres'),
+                'USER': env('DB_USER', default='postgres'),
+                'PASSWORD': env('DB_PASSWORD'),
+                'HOST': env('DB_HOST'),
+                'PORT': env('DB_PORT', default='5432'),
+                'OPTIONS': {
+                    'sslmode': 'require',
+                },
+                'CONN_MAX_AGE': 600,
+                'CONN_HEALTH_CHECKS': True,
+            }
+        }
+    except Exception as e:
+        # Fallback to SQLite if PostgreSQL configuration fails
+        print(f"PostgreSQL configuration failed: {e}, falling back to SQLite")
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

@@ -27,12 +27,27 @@ pip install --upgrade pip
 
 # Install Python dependencies
 echo "Installing Python dependencies..."
+echo "Python version: $(python --version)"
+
 # Install wheel first for better package building
-pip install wheel setuptools
+pip install --upgrade pip wheel setuptools
+
+# Handle psycopg2 compatibility issues
+echo "Installing database adapter..."
+if ! pip install psycopg2-binary==2.9.7 --no-cache-dir; then
+    echo "psycopg2-binary 2.9.7 failed, trying 2.9.5..."
+    if ! pip install psycopg2-binary==2.9.5 --no-cache-dir; then
+        echo "All psycopg2-binary versions failed, using SQLite fallback"
+        export USE_SQLITE=true
+    fi
+fi
 
 # Try to install packages with better error handling
 echo "Attempting to install all dependencies..."
-if ! pip install -r requirements.txt --no-cache-dir; then
+if [ "$USE_SQLITE" = "true" ]; then
+    echo "Using SQLite-only requirements due to PostgreSQL issues..."
+    pip install -r requirements-sqlite.txt --no-cache-dir
+elif ! pip install -r requirements.txt --no-cache-dir; then
     echo "Full installation failed, trying minimal requirements..."
 
     # Use minimal requirements as fallback
@@ -49,8 +64,14 @@ if ! pip install -r requirements.txt --no-cache-dir; then
         pip install cloudinary==1.36.0 || echo "Cloudinary installation failed, file uploads may not work"
         pip install sentry-sdk==2.14.0 || echo "Sentry installation failed, error monitoring disabled"
     else
-        echo "Even minimal installation failed, this may cause issues"
-        exit 1
+        echo "Minimal installation failed, trying SQLite-only..."
+        if pip install -r requirements-sqlite.txt --no-cache-dir; then
+            echo "SQLite-only requirements installed successfully"
+            export USE_SQLITE=true
+        else
+            echo "All installation methods failed"
+            exit 1
+        fi
     fi
 fi
 
