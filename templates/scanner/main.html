@@ -1,47 +1,5 @@
 {% extends 'base.html' %}
 
-// Toggle manual input
-function toggleManualInput() {
-    const manualDiv = document.getElementById('manual-input');
-    manualDiv.classList.toggle('hidden');
-    if (!manualDiv.classList.contains('hidden')) {
-        document.getElementById('manual-qr').focus();
-    }
-}
-
-// Process manual QR
-function processManualQR() {
-    const qrData = document.getElementById('manual-qr').value.trim();
-    if (qrData) {
-        processQRCode(qrData);
-        document.getElementById('manual-qr').value = '';
-        document.getElementById('manual-input').classList.add('hidden');
-    }
-}
-
-// Initialize on load
-window.addEventListener('load', () => {
-    initCamera();
-    
-    // Handle Enter key in manual input
-    document.getElementById('manual-qr').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            processManualQR();
-        }
-    });
-});
-
-// Handle visibility change
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-        scanning = false;
-    } else {
-        scanning = true;
-    }
-});
-</script>
-{% endblock %}
-
 {% block title %}QR Scanner - Mess Management{% endblock %}
 
 {% block content %}

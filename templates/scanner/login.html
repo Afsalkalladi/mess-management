@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}Scanner Login - Mess Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="header">
+        <h1>📷 QR Scanner Login</h1>
+        <p>Enter your staff token to access the scanner</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div style="background: #fed7d7; color: #c53030; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" style="max-width: 400px; margin: 0 auto;">
+        {% csrf_token %}
+
+        <div style="margin-bottom: 20px;">
+            <label for="token" style="display: block; margin-bottom: 8px; font-weight: 600; color: #667eea;">
+                Staff Token:
+            </label>
+            <input
+                type="password"
+                id="token"
+                name="token"
+                required
+                style="width: 100%; padding: 15px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px; transition: border-color 0.3s ease;"
+                placeholder="Enter your staff token"
+                onfocus="this.style.borderColor='#667eea'"
+                onblur="this.style.borderColor='#e2e8f0'"
+            >
+        </div>
+
+        <button
+            type="submit"
+            class="btn"
+            style="width: 100%; margin-bottom: 20px;"
+        >
+            🔓 Login to Scanner
+        </button>
+    </form>
+
+    <div style="text-align: center; margin-top: 30px; padding: 20px; background: #f7fafc; border-radius: 10px;">
+        <h4 style="color: #667eea; margin-bottom: 15px;">📋 Scanner Features</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; text-align: center;">
+            <div>
+                <div style="font-size: 2em; margin-bottom: 5px;">📷</div>
+                <div style="font-weight: 600;">QR Scanning</div>
+                <div style="font-size: 12px; color: #666;">Real-time scanning</div>
+            </div>
+            <div>
+                <div style="font-size: 2em; margin-bottom: 5px;">⌨️</div>
+                <div style="font-weight: 600;">Manual Entry</div>
+                <div style="font-size: 12px; color: #666;">Backup option</div>
+            </div>
+            <div>
+                <div style="font-size: 2em; margin-bottom: 5px;">📊</div>
+                <div style="font-weight: 600;">Statistics</div>
+                <div style="font-size: 12px; color: #666;">Daily reports</div>
+            </div>
+            <div>
+                <div style="font-size: 2em; margin-bottom: 5px;">🔐</div>
+                <div style="font-weight: 600;">Access Control</div>
+                <div style="font-size: 12px; color: #666;">Secure validation</div>
+            </div>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <a href="/" style="color: #667eea; text-decoration: none;">
+            ← Back to Home
+        </a>
+    </div>
+</div>
+{% endblock %}

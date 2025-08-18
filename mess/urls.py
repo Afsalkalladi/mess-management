@@ -15,10 +15,14 @@ from .scanner_views import (
     ScannerLoginView, ScannerMainView, ScannerProcessView,
     ScannerLogoutView, ScannerStatsView, ScannerManualView
 )
+from core.views import home_view
 
 app_name = 'mess'
 
 urlpatterns = [
+    # Home page
+    path('', home_view, name='home'),
+
     # API Endpoints
     # Student endpoints
     path('api/students/register/', StudentRegistrationView.as_view(), name='student-register'),

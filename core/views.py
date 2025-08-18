@@ -6,6 +6,11 @@ from django.shortcuts import render
 from django.http import JsonResponse
 
 
+def home_view(request):
+    """Home page view"""
+    return render(request, 'home.html')
+
+
 def error_404(request, exception):
     """Custom 404 error handler"""
     if request.path.startswith('/api/'):

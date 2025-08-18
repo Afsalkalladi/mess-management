@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}Mess Management System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="header">
+        <h1>🍽️ Mess Management System</h1>
+        <p>Welcome to the digital mess management platform</p>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">📱</div>
+            <div class="stat-label">Telegram Bot</div>
+            <p style="font-size: 12px; margin-top: 10px;">
+                <a href="https://t.me/testsaharamessbot" target="_blank" style="color: #667eea;">
+                    @testsaharamessbot
+                </a>
+            </p>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">👨‍💼</div>
+            <div class="stat-label">Admin Panel</div>
+            <p style="font-size: 12px; margin-top: 10px;">
+                <a href="/admin/" style="color: #667eea;">
+                    Login to Admin
+                </a>
+            </p>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">📷</div>
+            <div class="stat-label">QR Scanner</div>
+            <p style="font-size: 12px; margin-top: 10px;">
+                <a href="/scanner/" style="color: #667eea;">
+                    Access Scanner
+                </a>
+            </p>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-value">🔧</div>
+            <div class="stat-label">API</div>
+            <p style="font-size: 12px; margin-top: 10px;">
+                <a href="/api/" style="color: #667eea;">
+                    View API
+                </a>
+            </p>
+        </div>
+    </div>
+    
+    <div style="margin-top: 30px; text-align: center;">
+        <h3 style="color: #667eea; margin-bottom: 20px;">🚀 Getting Started</h3>
+        
+        <div style="text-align: left; max-width: 600px; margin: 0 auto;">
+            <h4 style="color: #667eea;">For Students:</h4>
+            <ol style="margin-bottom: 20px;">
+                <li>Message <a href="https://t.me/testsaharamessbot" target="_blank">@testsaharamessbot</a> on Telegram</li>
+                <li>Send <code>/start</code> command</li>
+                <li>Click "📝 Register" to register for mess</li>
+                <li>Upload payment screenshot when prompted</li>
+                <li>Wait for admin approval</li>
+                <li>Get your QR code with <code>/myqr</code> command</li>
+            </ol>
+            
+            <h4 style="color: #667eea;">For Administrators:</h4>
+            <ol style="margin-bottom: 20px;">
+                <li>Access the <a href="/admin/">Admin Panel</a></li>
+                <li>Review and approve student registrations</li>
+                <li>Verify payment screenshots</li>
+                <li>Manage mess cuts and closures</li>
+                <li>Monitor QR scanner statistics</li>
+            </ol>
+            
+            <h4 style="color: #667eea;">For Staff:</h4>
+            <ol>
+                <li>Access the <a href="/scanner/">QR Scanner</a></li>
+                <li>Login with your staff token</li>
+                <li>Scan student QR codes for meal access</li>
+                <li>View daily statistics</li>
+            </ol>
+        </div>
+    </div>
+    
+    <div style="margin-top: 30px; padding: 20px; background: #f7fafc; border-radius: 10px;">
+        <h4 style="color: #667eea; margin-bottom: 15px;">📋 System Status</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <div>
+                <strong>🤖 Telegram Bot:</strong> 
+                <span style="color: #48bb78;">Active</span>
+            </div>
+            <div>
+                <strong>🗄️ Database:</strong> 
+                <span style="color: #48bb78;">Connected</span>
+            </div>
+            <div>
+                <strong>📡 Webhook:</strong> 
+                <span style="color: #48bb78;">Configured</span>
+            </div>
+            <div>
+                <strong>🔐 Admin Panel:</strong> 
+                <span style="color: #48bb78;">Available</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 style="color: #667eea; margin-bottom: 20px;">📱 Bot Commands</h3>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+        <div>
+            <h4 style="color: #667eea;">Student Commands:</h4>
+            <ul style="list-style: none; padding: 0;">
+                <li style="margin: 10px 0;"><code>/start</code> - Main menu</li>
+                <li style="margin: 10px 0;"><code>/register</code> - Register for mess</li>
+                <li style="margin: 10px 0;"><code>/payment</code> - Upload payment</li>
+                <li style="margin: 10px 0;"><code>/messcut</code> - Apply for mess cut</li>
+                <li style="margin: 10px 0;"><code>/myqr</code> - View QR code</li>
+                <li style="margin: 10px 0;"><code>/status</code> - Check status</li>
+                <li style="margin: 10px 0;"><code>/help</code> - Get help</li>
+            </ul>
+        </div>
+        
+        <div>
+            <h4 style="color: #667eea;">Admin Commands:</h4>
+            <ul style="list-style: none; padding: 0;">
+                <li style="margin: 10px 0;"><code>/admin</code> - Admin panel</li>
+                <li style="margin: 10px 0;">📝 Approve registrations</li>
+                <li style="margin: 10px 0;">💰 Verify payments</li>
+                <li style="margin: 10px 0;">📊 View statistics</li>
+                <li style="margin: 10px 0;">🔧 Manage system</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<div style="text-align: center; margin-top: 30px; color: #666;">
+    <p>Mess Management System v1.0.0</p>
+    <p>Built with Django & Telegram Bot API</p>
+</div>
+{% endblock %}

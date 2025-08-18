@@ -494,13 +494,38 @@ Phone: {student.phone}
 @method_decorator(csrf_exempt, name='dispatch')
 class TelegramWebhookView(View):
     """Webhook endpoint for Telegram updates"""
-    
+
     def post(self, request):
         """Process webhook update"""
         try:
             data = json.loads(request.body)
+            logger.info(f"Received webhook update: {data}")
+
+            # Create bot instance
             bot = TelegramBot()
-            bot.application.update_queue.put_nowait(Update.de_json(data, bot.application.bot))
+
+            # Create update object
+            update = Update.de_json(data, bot.application.bot)
+
+            # Process the update synchronously
+            import asyncio
+
+            async def process_update():
+                try:
+                    await bot.application.process_update(update)
+                    logger.info("Update processed successfully")
+                except Exception as e:
+                    logger.error(f"Error processing update: {e}")
+
+            # Run the async function
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+            loop.run_until_complete(process_update())
+
             return JsonResponse({'ok': True})
         except Exception as e:
             logger.error(f"Webhook error: {e}")
