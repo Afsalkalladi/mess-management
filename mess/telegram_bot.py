@@ -10,6 +10,7 @@ from django.views import View
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from asgiref.sync import sync_to_async
 import json
 import logging
 from datetime import datetime, timedelta
@@ -114,17 +115,17 @@ Contact @mess_support for assistance
     async def register_command(self, update: Update, context):
         """Handle registration flow"""
         user = update.effective_user
-        
+
         # Check if already registered
         try:
-            student = Student.objects.get(tg_user_id=user.id)
+            student = await sync_to_async(Student.objects.get)(tg_user_id=user.id)
             await update.message.reply_text(
                 f"You're already registered with status: {student.status}"
             )
             return
         except Student.DoesNotExist:
             pass
-        
+
         # Start registration flow
         context.user_data['registration_flow'] = {'step': 'name'}
         await update.message.reply_text(
@@ -137,7 +138,7 @@ Contact @mess_support for assistance
         
         # Check if registered and approved
         try:
-            student = Student.objects.get(tg_user_id=user.id)
+            student = await sync_to_async(Student.objects.get)(tg_user_id=user.id)
             if student.status != StudentStatus.APPROVED:
                 await update.message.reply_text(
                     "Your registration is not approved yet. Please wait for admin approval."
@@ -173,7 +174,7 @@ Contact @mess_support for assistance
         
         # Check if registered and approved
         try:
-            student = Student.objects.get(tg_user_id=user.id)
+            student = await sync_to_async(Student.objects.get)(tg_user_id=user.id)
             if student.status != StudentStatus.APPROVED:
                 await update.message.reply_text(
                     "Your registration is not approved yet."
@@ -206,7 +207,7 @@ Contact @mess_support for assistance
         user = update.effective_user
         
         try:
-            student = Student.objects.get(tg_user_id=user.id)
+            student = await sync_to_async(Student.objects.get)(tg_user_id=user.id)
             if student.status != StudentStatus.APPROVED:
                 await update.message.reply_text(
                     "Your registration is not approved yet."
@@ -232,20 +233,20 @@ Contact @mess_support for assistance
         user = update.effective_user
         
         try:
-            student = Student.objects.get(tg_user_id=user.id)
+            student = await sync_to_async(Student.objects.get)(tg_user_id=user.id)
             
             # Get payment status
-            current_payment = student.payments.filter(
+            current_payment = await sync_to_async(student.payments.filter(
                 status=PaymentStatus.VERIFIED,
                 cycle_start__lte=datetime.now().date(),
                 cycle_end__gte=datetime.now().date()
-            ).first()
-            
+            ).first)()
+
             # Get active mess cuts
-            active_cuts = student.mess_cuts.filter(
+            active_cuts = await sync_to_async(student.mess_cuts.filter(
                 from_date__lte=datetime.now().date(),
                 to_date__gte=datetime.now().date()
-            ).count()
+            ).count)()
             
             status_text = f"""
 📊 **Your Status**
@@ -323,7 +324,7 @@ QR Version: {student.qr_version}
         
         if data == 'admin_registrations':
             # Show pending registrations
-            pending = Student.objects.filter(status=StudentStatus.PENDING)
+            pending = await sync_to_async(list)(Student.objects.filter(status=StudentStatus.PENDING))
             
             if not pending:
                 await query.message.reply_text("No pending registrations")
@@ -355,7 +356,7 @@ Phone: {student.phone}
         elif data.startswith('approve_') or data.startswith('deny_'):
             # Process approval/denial
             action, student_id = data.split('_')
-            student = Student.objects.get(id=int(student_id))
+            student = await sync_to_async(Student.objects.get)(id=int(student_id))
             
             if action == 'approve':
                 student.status = StudentStatus.APPROVED
@@ -375,7 +376,7 @@ Phone: {student.phone}
                 message = "❌ Registration denied."
                 send_telegram_notification.delay(student.tg_user_id, message)
             
-            student.save()
+            await sync_to_async(student.save)()
             await query.message.reply_text(f"Student {action}d successfully")
     
     async def handle_photo(self, update: Update, context):
@@ -398,7 +399,7 @@ Phone: {student.phone}
             screenshot_url = upload_to_cloudinary(file)
             
             # Create payment record
-            payment = Payment.objects.create(
+            payment = await sync_to_async(Payment.objects.create)(
                 student_id=flow['student_id'],
                 cycle_start=flow['cycle_start'],
                 cycle_end=flow['cycle_end'],
@@ -467,7 +468,7 @@ Phone: {student.phone}
             flow['phone'] = text
             
             # Create student record
-            student = Student.objects.create(
+            student = await sync_to_async(Student.objects.create)(
                 tg_user_id=update.effective_user.id,
                 name=flow['name'],
                 roll_no=flow['roll_no'],
