@@ -111,7 +111,140 @@ Contact @mess_support for assistance
         """
         
         await update.message.reply_text(help_text, parse_mode='Markdown')
-    
+
+    # Callback handlers for inline buttons
+    async def register_callback(self, update: Update, context):
+        """Handle register button callback"""
+        query = update.callback_query
+        user = update.effective_user
+
+        # Check if already registered
+        try:
+            student = await sync_to_async(Student.objects.get)(tg_user_id=user.id)
+            await query.edit_message_text(
+                f"You're already registered with status: {student.status}"
+            )
+            return
+        except Student.DoesNotExist:
+            pass
+
+        # Start registration flow
+        context.user_data['registration_flow'] = {'step': 'name'}
+        await query.edit_message_text(
+            "Let's start your registration!\n\nPlease enter your full name:"
+        )
+
+    async def payment_callback(self, update: Update, context):
+        """Handle payment button callback"""
+        query = update.callback_query
+        user = update.effective_user
+
+        # Check if registered and approved
+        try:
+            student = await sync_to_async(Student.objects.get)(tg_user_id=user.id)
+            if student.status != StudentStatus.APPROVED:
+                await query.edit_message_text(
+                    "Your registration is not approved yet. Please wait for admin approval."
+                )
+                return
+        except Student.DoesNotExist:
+            await query.edit_message_text(
+                "Please register first using /register"
+            )
+            return
+
+        # Start payment flow
+        context.user_data['payment_flow'] = {
+            'step': 'cycle_start',
+            'student_id': student.id
+        }
+        await query.edit_message_text(
+            "💳 Payment Upload\n\nPlease enter the cycle start date (YYYY-MM-DD):"
+        )
+
+    async def messcut_callback(self, update: Update, context):
+        """Handle mess cut button callback"""
+        query = update.callback_query
+        user = update.effective_user
+
+        # Check if registered and approved
+        try:
+            student = await sync_to_async(Student.objects.get)(tg_user_id=user.id)
+            if student.status != StudentStatus.APPROVED:
+                await query.edit_message_text(
+                    "Your registration is not approved yet."
+                )
+                return
+        except Student.DoesNotExist:
+            await query.edit_message_text(
+                "Please register first using /register"
+            )
+            return
+
+        # Start mess cut flow
+        context.user_data['messcut_flow'] = {
+            'step': 'from_date',
+            'student_id': student.id
+        }
+        await query.edit_message_text(
+            "✂️ Mess Cut Application\n\nPlease enter the start date (YYYY-MM-DD):"
+        )
+
+    async def myqr_callback(self, update: Update, context):
+        """Handle QR code button callback"""
+        query = update.callback_query
+        user = update.effective_user
+
+        try:
+            student = await sync_to_async(Student.objects.get)(tg_user_id=user.id)
+            if student.status != StudentStatus.APPROVED:
+                await query.edit_message_text(
+                    "Your registration is not approved yet."
+                )
+                return
+
+            # Generate QR code
+            qr_data = f"{student.roll_no}:{student.qr_nonce}:{student.qr_version}"
+            qr_code_url = generate_qr_code(qr_data)
+
+            await query.edit_message_text(
+                f"🎫 Your QR Code\n\nRoll No: {student.roll_no}\nName: {student.name}\n\nShow this QR code at the mess counter:"
+            )
+
+            # Send QR code image
+            await context.bot.send_photo(
+                chat_id=query.message.chat_id,
+                photo=qr_code_url,
+                caption=f"QR Code for {student.name} ({student.roll_no})"
+            )
+
+        except Student.DoesNotExist:
+            await query.edit_message_text(
+                "Please register first using /register"
+            )
+
+    async def help_callback(self, update: Update, context):
+        """Handle help button callback"""
+        query = update.callback_query
+
+        help_text = """
+🆘 **Help & Support**
+
+**Available Commands:**
+• `/start` - Main menu
+• `/register` - Register for mess
+• `/payment` - Upload payment screenshot
+• `/messcut` - Apply for mess cut
+• `/myqr` - View your QR code
+• `/status` - Check your status
+• `/help` - Show this help
+
+**Need Help?**
+Contact @mess_support for assistance
+        """
+
+        await query.edit_message_text(help_text, parse_mode='Markdown')
+
     async def register_command(self, update: Update, context):
         """Handle registration flow"""
         user = update.effective_user
@@ -294,20 +427,20 @@ QR Version: {student.qr_version}
         """Handle inline keyboard callbacks"""
         query = update.callback_query
         await query.answer()
-        
+
         data = query.data
-        
+
         # Route to appropriate handler
         if data == 'register':
-            await self.register_command(update, context)
+            await self.register_callback(update, context)
         elif data == 'payment':
-            await self.payment_command(update, context)
+            await self.payment_callback(update, context)
         elif data == 'messcut':
-            await self.messcut_command(update, context)
+            await self.messcut_callback(update, context)
         elif data == 'myqr':
-            await self.myqr_command(update, context)
+            await self.myqr_callback(update, context)
         elif data == 'help':
-            await self.help_command(update, context)
+            await self.help_callback(update, context)
         elif data.startswith('admin_'):
             await self.handle_admin_callback(update, context, data)
         elif data.startswith('payment_'):
@@ -395,7 +528,7 @@ Phone: {student.phone}
             file = await photo.get_file()
             
             # Upload to Cloudinary
-            from .utils import upload_to_cloudinary
+            from core.utils import upload_to_cloudinary
             screenshot_url = upload_to_cloudinary(file)
             
             # Create payment record
