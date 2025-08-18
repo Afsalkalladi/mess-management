@@ -491,6 +491,31 @@ Phone: {student.phone}
                 )
 
 
+# Global bot instance
+_bot_instance = None
+
+def get_bot_instance():
+    """Get or create a global bot instance"""
+    global _bot_instance
+    if _bot_instance is None:
+        _bot_instance = TelegramBot()
+        # Initialize the application synchronously
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        async def init_bot():
+            await _bot_instance.application.initialize()
+
+        loop.run_until_complete(init_bot())
+        logger.info("Bot instance initialized successfully")
+
+    return _bot_instance
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class TelegramWebhookView(View):
     """Webhook endpoint for Telegram updates"""
@@ -501,8 +526,8 @@ class TelegramWebhookView(View):
             data = json.loads(request.body)
             logger.info(f"Received webhook update: {data}")
 
-            # Create bot instance
-            bot = TelegramBot()
+            # Get the initialized bot instance
+            bot = get_bot_instance()
 
             # Create update object
             update = Update.de_json(data, bot.application.bot)
