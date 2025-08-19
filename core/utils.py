@@ -130,7 +130,7 @@ def get_current_meal() -> Optional[str]:
     Returns:
         Meal type (BREAKFAST/LUNCH/DINNER) or None
     """
-    tz = pytz.timezone(settings.TIMEZONE)
+    tz = pytz.timezone(settings.TIME_ZONE)
     current_time = timezone.now().astimezone(tz).time()
     
     meal_timings = settings.MEAL_TIMINGS

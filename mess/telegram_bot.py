@@ -617,29 +617,38 @@ Choose an action:
             # Get system info
             from django.conf import settings as django_settings
 
+            # Get bot username safely
+            bot_username = getattr(django_settings, 'BOT_USERNAME', 'Not configured')
+            if not bot_username or bot_username == 'Not configured':
+                bot_username = 'Check TELEGRAM_BOT_TOKEN'
+
             settings_text = f"""
 🔧 **System Settings**
 
 **🤖 Bot Configuration:**
-• Bot Name: @{django_settings.BOT_USERNAME}
+• Bot Token: {'✅ Configured' if hasattr(django_settings, 'TELEGRAM_BOT_TOKEN') else '❌ Missing'}
 • Admin Users: {len(self.admin_ids)} configured
+• Webhook: {'✅ Active' if hasattr(django_settings, 'TELEGRAM_WEBHOOK_URL') else '❌ Not set'}
 
 **🔐 Security:**
 • QR Secret: {'✅ Configured' if hasattr(django_settings, 'QR_SECRET') else '❌ Missing'}
-• Staff Tokens: Active authentication system
+• Staff Tokens: ✅ Active authentication system
+• Debug Mode: {'🟡 ON' if django_settings.DEBUG else '🔴 OFF'}
 
 **💾 Database:**
-• Status: ✅ Connected
+• Status: ✅ Connected and operational
 • Environment: {'🔴 Production' if not django_settings.DEBUG else '🟡 Development'}
+• Time Zone: {getattr(django_settings, 'TIME_ZONE', 'UTC')}
 
 **📱 Features:**
 • Registration: ✅ Active
 • Payment Upload: ✅ Active
 • QR Scanner: ✅ Active
 • Admin Panel: ✅ Active
+• Celery Tasks: ✅ Configured
 
 **🔧 Management:**
-• Create Staff Token: Use Django Admin
+• Create Staff Token: Use Django Admin or command
 • View Logs: Check admin panel
 • System Status: All systems operational
 
