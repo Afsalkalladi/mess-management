@@ -15,9 +15,27 @@ from .models import (
 from core.utils import validate_qr_payload, get_current_meal
 
 
+class StudentSerializer(serializers.ModelSerializer):
+    """Complete student serializer for Mini App"""
+
+    class Meta:
+        model = Student
+        fields = ['id', 'name', 'roll_no', 'room_no', 'phone', 'status', 'created_at', 'tg_user_id', 'tg_username']
+        read_only_fields = ['id', 'created_at', 'tg_user_id', 'tg_username']
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    """Complete payment serializer for Mini App"""
+
+    class Meta:
+        model = Payment
+        fields = ['id', 'amount', 'status', 'created_at', 'verified_at', 'screenshot_url']
+        read_only_fields = ['id', 'created_at', 'verified_at']
+
+
 class StudentRegistrationSerializer(serializers.ModelSerializer):
     """Student registration with validation"""
-    
+
     class Meta:
         model = Student
         fields = ['name', 'roll_no', 'room_no', 'phone', 'tg_user_id']

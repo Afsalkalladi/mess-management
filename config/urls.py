@@ -14,6 +14,9 @@ urlpatterns = [
     
     # Mess app URLs (includes API and Scanner)
     path('', include('mess.urls')),
+
+    # Telegram Mini App
+    path('miniapp/', include('mess.miniapp_urls')),
     
     # Health check endpoint
     path('health/', lambda r: JsonResponse({'status': 'ok'}), name='health-check'),

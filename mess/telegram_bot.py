@@ -58,7 +58,11 @@ class TelegramBot:
         """Handle /start command"""
         user = update.effective_user
         
+        # Add Mini App button
+        from telegram import WebAppInfo
+
         keyboard = [
+            [InlineKeyboardButton("🌐 Open Mess App", web_app=WebAppInfo(url=f"https://{settings.RENDER_EXTERNAL_HOSTNAME}/miniapp/"))],
             [InlineKeyboardButton("📝 Register", callback_data='register')],
             [InlineKeyboardButton("💳 Upload Payment", callback_data='payment')],
             [InlineKeyboardButton("✂️ Take Mess Cut", callback_data='messcut')],

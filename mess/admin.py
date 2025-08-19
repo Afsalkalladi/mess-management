@@ -208,11 +208,17 @@ class StaffTokenAdmin(admin.ModelAdmin):
             if not obj.expires_at:
                 obj.expires_at = timezone.now() + timedelta(days=365)
 
-            # Generate token using the class method
-            raw_token, obj = StaffToken.create_token(
+            # Generate token using the class method - this returns (raw_token, instance)
+            raw_token, new_obj = StaffToken.create_token(
                 label=obj.label,
                 expires_at=obj.expires_at
             )
+
+            # Replace the obj with the properly created one
+            obj.pk = new_obj.pk
+            obj.token_hash = new_obj.token_hash
+            obj.issued_at = new_obj.issued_at
+            obj.active = new_obj.active
 
             # Store raw token temporarily for display
             obj._raw_token = raw_token
@@ -225,6 +231,9 @@ class StaffTokenAdmin(admin.ModelAdmin):
                 f'Token: {raw_token} '
                 f'(Save this token - it will not be shown again!)'
             )
+
+            # Don't call super().save_model() since we already created the object
+            return
         else:
             super().save_model(request, obj, form, change)
 

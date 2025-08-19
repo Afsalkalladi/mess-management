@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mess Management System</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: var(--tg-theme-text-color, #000000);
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: var(--tg-theme-hint-color, #999999);
+        }
+
+        .card {
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+            background: var(--tg-theme-button-color, #007AFF);
+            color: var(--tg-theme-button-text-color, #ffffff);
+        }
+
+        .btn:hover {
+            opacity: 0.8;
+        }
+
+        .btn-secondary {
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            color: var(--tg-theme-text-color, #000000);
+            border: 1px solid var(--tg-theme-hint-color, #999999);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--tg-theme-hint-color, #999999);
+            border-radius: 8px;
+            font-size: 16px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-denied {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--tg-theme-hint-color, #999999);
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .qr-container {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .qr-container img {
+            max-width: 200px;
+            border-radius: 8px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .admin-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--tg-theme-button-color, #007AFF);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #999999);
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍽️ Mess Management</h1>
+            <p>Welcome to your digital mess experience</p>
+        </div>
+
+        <!-- Loading Screen -->
+        <div id="loading" class="loading">
+            <div>Loading...</div>
+        </div>
+
+        <!-- Error Display -->
+        <div id="error" class="error hidden"></div>
+        
+        <!-- Success Display -->
+        <div id="success" class="success hidden"></div>
+
+        <!-- Main Menu -->
+        <div id="main-menu" class="hidden">
+            <div class="card">
+                <h2>Quick Actions</h2>
+                <button class="btn" onclick="showRegistration()">📝 Register</button>
+                <button class="btn" onclick="showPayment()">💳 Upload Payment</button>
+                <button class="btn" onclick="showQR()">🎫 My QR Code</button>
+                <button class="btn btn-secondary" onclick="showProfile()">👤 My Profile</button>
+            </div>
+        </div>
+
+        <!-- Registration Form -->
+        <div id="registration-form" class="hidden">
+            <div class="card">
+                <h2>Student Registration</h2>
+                <form id="register-form">
+                    <div class="form-group">
+                        <label for="name">Full Name</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="rollNo">Roll Number</label>
+                        <input type="text" id="rollNo" name="rollNo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="roomNo">Room Number</label>
+                        <input type="text" id="roomNo" name="roomNo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" id="phone" name="phone" required>
+                    </div>
+                    <button type="submit" class="btn">Submit Registration</button>
+                    <button type="button" class="btn btn-secondary" onclick="showMainMenu()">Cancel</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Payment Form -->
+        <div id="payment-form" class="hidden">
+            <div class="card">
+                <h2>Upload Payment</h2>
+                <form id="payment-upload-form">
+                    <div class="form-group">
+                        <label for="amount">Amount</label>
+                        <input type="number" id="amount" name="amount" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="screenshot">Payment Screenshot</label>
+                        <input type="file" id="screenshot" name="screenshot" accept="image/*" required>
+                    </div>
+                    <button type="submit" class="btn">Upload Payment</button>
+                    <button type="button" class="btn btn-secondary" onclick="showMainMenu()">Cancel</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- QR Code Display -->
+        <div id="qr-display" class="hidden">
+            <div class="card">
+                <h2>Your QR Code</h2>
+                <div class="qr-container">
+                    <img id="qr-image" src="" alt="QR Code">
+                    <p id="qr-info"></p>
+                </div>
+                <button class="btn btn-secondary" onclick="showMainMenu()">Back</button>
+            </div>
+        </div>
+
+        <!-- Profile Display -->
+        <div id="profile-display" class="hidden">
+            <div class="card">
+                <h2>My Profile</h2>
+                <div id="profile-content"></div>
+                <button class="btn btn-secondary" onclick="showMainMenu()">Back</button>
+            </div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div id="admin-panel" class="hidden">
+            <div class="card">
+                <h2>Admin Dashboard</h2>
+                <div id="admin-stats" class="admin-stats"></div>
+                <div id="admin-actions"></div>
+                <button class="btn btn-secondary" onclick="showMainMenu()">Back</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Telegram WebApp initialization
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        let currentUser = null;
+        let authToken = null;
+
+        // Initialize the app
+        async function init() {
+            try {
+                // Authenticate with backend
+                const response = await fetch('/miniapp/api/auth/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        initData: tg.initData
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentUser = data.user;
+                    authToken = data.token;
+                    await loadUserData();
+                } else {
+                    showError('Authentication failed: ' + data.error);
+                }
+            } catch (error) {
+                showError('Failed to initialize app: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function loadUserData() {
+            try {
+                const response = await fetch('/miniapp/api/student/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.student) {
+                        // User is registered
+                        showMainMenu();
+                        
+                        // Check if admin
+                        if (currentUser.id && [5469651459].includes(currentUser.id)) {
+                            document.getElementById('main-menu').innerHTML += 
+                                '<button class="btn" onclick="showAdmin()">🔧 Admin Panel</button>';
+                        }
+                    } else {
+                        // User needs to register
+                        showRegistration();
+                    }
+                }
+            } catch (error) {
+                showError('Failed to load user data: ' + error.message);
+            }
+        }
+
+        // UI Functions
+        function hideLoading() {
+            document.getElementById('loading').classList.add('hidden');
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            setTimeout(() => errorDiv.classList.add('hidden'), 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success');
+            successDiv.textContent = message;
+            successDiv.classList.remove('hidden');
+            setTimeout(() => successDiv.classList.add('hidden'), 3000);
+        }
+
+        function hideAllScreens() {
+            document.querySelectorAll('.container > div:not(#loading):not(#error):not(#success)').forEach(el => {
+                el.classList.add('hidden');
+            });
+        }
+
+        function showMainMenu() {
+            hideAllScreens();
+            document.getElementById('main-menu').classList.remove('hidden');
+        }
+
+        function showRegistration() {
+            hideAllScreens();
+            document.getElementById('registration-form').classList.remove('hidden');
+        }
+
+        function showPayment() {
+            hideAllScreens();
+            document.getElementById('payment-form').classList.remove('hidden');
+        }
+
+        async function showQR() {
+            hideAllScreens();
+            try {
+                const response = await fetch('/miniapp/api/qr/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('qr-image').src = data.qr_code;
+                    document.getElementById('qr-info').textContent = 
+                        `${data.student_name} (${data.roll_no})`;
+                    document.getElementById('qr-display').classList.remove('hidden');
+                } else {
+                    showError(data.error);
+                    showMainMenu();
+                }
+            } catch (error) {
+                showError('Failed to load QR code: ' + error.message);
+                showMainMenu();
+            }
+        }
+
+        async function showProfile() {
+            hideAllScreens();
+            try {
+                const response = await fetch('/miniapp/api/student/');
+                const data = await response.json();
+                
+                if (data.success && data.student) {
+                    const student = data.student;
+                    document.getElementById('profile-content').innerHTML = `
+                        <p><strong>Name:</strong> ${student.name}</p>
+                        <p><strong>Roll No:</strong> ${student.roll_no}</p>
+                        <p><strong>Room:</strong> ${student.room_no}</p>
+                        <p><strong>Phone:</strong> ${student.phone}</p>
+                        <p><strong>Status:</strong> <span class="status-badge status-${student.status.toLowerCase()}">${student.status}</span></p>
+                    `;
+                    document.getElementById('profile-display').classList.remove('hidden');
+                } else {
+                    showError('Failed to load profile');
+                    showMainMenu();
+                }
+            } catch (error) {
+                showError('Failed to load profile: ' + error.message);
+                showMainMenu();
+            }
+        }
+
+        async function showAdmin() {
+            hideAllScreens();
+            try {
+                const response = await fetch('/miniapp/api/admin/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const stats = data.stats;
+                    document.getElementById('admin-stats').innerHTML = `
+                        <div class="stat-card">
+                            <div class="stat-number">${stats.total_students}</div>
+                            <div class="stat-label">Total Students</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${stats.pending_registrations}</div>
+                            <div class="stat-label">Pending</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${stats.approved_students}</div>
+                            <div class="stat-label">Approved</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${stats.pending_payments}</div>
+                            <div class="stat-label">Payments</div>
+                        </div>
+                    `;
+                    
+                    // Show recent registrations
+                    let actionsHTML = '<h3>Recent Registrations</h3>';
+                    data.recent_registrations.forEach(student => {
+                        actionsHTML += `
+                            <div class="card" style="margin-bottom: 10px; padding: 10px;">
+                                <p><strong>${student.name}</strong> (${student.roll_no})</p>
+                                <p>Room: ${student.room_no} | Phone: ${student.phone}</p>
+                                <button class="btn" onclick="approveStudent(${student.id})">Approve</button>
+                                <button class="btn btn-secondary" onclick="denyStudent(${student.id})">Deny</button>
+                            </div>
+                        `;
+                    });
+                    
+                    document.getElementById('admin-actions').innerHTML = actionsHTML;
+                    document.getElementById('admin-panel').classList.remove('hidden');
+                } else {
+                    showError(data.error);
+                    showMainMenu();
+                }
+            } catch (error) {
+                showError('Failed to load admin panel: ' + error.message);
+                showMainMenu();
+            }
+        }
+
+        // Form Handlers
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            
+            try {
+                const response = await fetch('/miniapp/api/student/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess(result.message);
+                    showMainMenu();
+                } else {
+                    showError(result.error);
+                }
+            } catch (error) {
+                showError('Registration failed: ' + error.message);
+            }
+        });
+
+        document.getElementById('payment-upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            
+            try {
+                const response = await fetch('/miniapp/api/payment/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess(result.message);
+                    showMainMenu();
+                } else {
+                    showError(result.error);
+                }
+            } catch (error) {
+                showError('Payment upload failed: ' + error.message);
+            }
+        });
+
+        // Admin Functions
+        async function approveStudent(studentId) {
+            await adminAction('approve', studentId);
+        }
+
+        async function denyStudent(studentId) {
+            await adminAction('deny', studentId);
+        }
+
+        async function adminAction(action, studentId) {
+            try {
+                const response = await fetch('/miniapp/api/admin/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: action,
+                        student_id: studentId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess(result.message);
+                    showAdmin(); // Refresh admin panel
+                } else {
+                    showError(result.error);
+                }
+            } catch (error) {
+                showError('Action failed: ' + error.message);
+            }
+        }
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>
