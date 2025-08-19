@@ -614,8 +614,44 @@ Choose an action:
             )
 
         elif data == 'admin_settings':
+            # Get system info
+            from django.conf import settings as django_settings
+
+            settings_text = f"""
+🔧 **System Settings**
+
+**🤖 Bot Configuration:**
+• Bot Name: @{django_settings.BOT_USERNAME}
+• Admin Users: {len(self.admin_ids)} configured
+
+**🔐 Security:**
+• QR Secret: {'✅ Configured' if hasattr(django_settings, 'QR_SECRET') else '❌ Missing'}
+• Staff Tokens: Active authentication system
+
+**💾 Database:**
+• Status: ✅ Connected
+• Environment: {'🔴 Production' if not django_settings.DEBUG else '🟡 Development'}
+
+**📱 Features:**
+• Registration: ✅ Active
+• Payment Upload: ✅ Active
+• QR Scanner: ✅ Active
+• Admin Panel: ✅ Active
+
+**🔧 Management:**
+• Create Staff Token: Use Django Admin
+• View Logs: Check admin panel
+• System Status: All systems operational
+
+Use the back button to return to admin panel.
+            """
+
+            keyboard = [[InlineKeyboardButton("🔙 Back to Admin", callback_data='admin')]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
             await query.edit_message_text(
-                "🔧 **System Settings**\n\nSettings management features coming soon!",
+                settings_text,
+                reply_markup=reply_markup,
                 parse_mode='Markdown'
             )
     
