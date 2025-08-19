@@ -245,6 +245,65 @@ Contact @mess_support for assistance
 
         await query.edit_message_text(help_text, parse_mode='Markdown')
 
+    async def admin_callback(self, update: Update, context):
+        """Handle admin button callback"""
+        query = update.callback_query
+        user = update.effective_user
+
+        if user.id not in self.admin_ids:
+            await query.edit_message_text("Unauthorized")
+            return
+
+        keyboard = [
+            [InlineKeyboardButton("👥 Pending Registrations", callback_data='admin_registrations')],
+            [InlineKeyboardButton("💰 Pending Payments", callback_data='admin_payments')],
+            [InlineKeyboardButton("📊 Statistics", callback_data='admin_stats')],
+            [InlineKeyboardButton("🔧 System Settings", callback_data='admin_settings')],
+            [InlineKeyboardButton("🔙 Back to Main", callback_data='back_to_main')]
+        ]
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await query.edit_message_text(
+            "🔧 **Admin Panel**\n\nSelect an option:",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+
+    async def back_to_main_callback(self, update: Update, context):
+        """Handle back to main button callback"""
+        query = update.callback_query
+        user = update.effective_user
+
+        keyboard = [
+            [InlineKeyboardButton("📝 Register", callback_data='register')],
+            [InlineKeyboardButton("💳 Upload Payment", callback_data='payment')],
+            [InlineKeyboardButton("✂️ Take Mess Cut", callback_data='messcut')],
+            [InlineKeyboardButton("🎫 My QR", callback_data='myqr')],
+            [InlineKeyboardButton("ℹ️ Help", callback_data='help')]
+        ]
+
+        if user.id in self.admin_ids:
+            keyboard.append([InlineKeyboardButton("🔧 Admin Panel", callback_data='admin')])
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        welcome_text = f"""
+Welcome to Mess Management System, {user.first_name}! 👋
+
+I'm here to help you manage your mess operations. Use the buttons below to:
+
+• Register for mess access
+• Upload payment screenshots
+• Apply for mess cuts
+• View your QR code
+• Get help and support
+
+Please select an option to continue:
+        """
+
+        await query.edit_message_text(welcome_text, reply_markup=reply_markup)
+
     async def register_command(self, update: Update, context):
         """Handle registration flow"""
         user = update.effective_user
@@ -441,6 +500,10 @@ QR Version: {student.qr_version}
             await self.myqr_callback(update, context)
         elif data == 'help':
             await self.help_callback(update, context)
+        elif data == 'admin':
+            await self.admin_callback(update, context)
+        elif data == 'back_to_main':
+            await self.back_to_main_callback(update, context)
         elif data.startswith('admin_'):
             await self.handle_admin_callback(update, context, data)
         elif data.startswith('payment_'):
