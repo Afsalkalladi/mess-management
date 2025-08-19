@@ -179,20 +179,61 @@ class ScanEventAdmin(admin.ModelAdmin):
 @admin.register(StaffToken)
 class StaffTokenAdmin(admin.ModelAdmin):
     """Admin interface for StaffToken model"""
-    
-    list_display = ['label', 'active', 'issued_at', 'expires_at', 'last_used_at']
+
+    list_display = ['label', 'token_hash_short', 'active', 'issued_at', 'expires_at', 'last_used_at']
     list_filter = ['active', 'issued_at', 'expires_at']
     search_fields = ['label']
-    readonly_fields = ['token_hash', 'issued_at', 'last_used_at']
-    
+    readonly_fields = ['token_hash', 'issued_at', 'last_used_at', 'raw_token_display']
+
     actions = ['deactivate_tokens', 'activate_tokens']
-    
+
+    def token_hash_short(self, obj):
+        if obj.token_hash:
+            return f"{obj.token_hash[:8]}..."
+        return "Not set"
+    token_hash_short.short_description = "Token Hash"
+
+    def raw_token_display(self, obj):
+        if hasattr(obj, '_raw_token'):
+            return f"🔑 {obj._raw_token}"
+        return "Token will be generated on save"
+    raw_token_display.short_description = "Raw Token (Save this!)"
+
+    def save_model(self, request, obj, form, change):
+        if not change:  # Creating new token
+            from datetime import datetime, timedelta
+            from django.utils import timezone
+
+            # Set default expiry to 1 year if not set
+            if not obj.expires_at:
+                obj.expires_at = timezone.now() + timedelta(days=365)
+
+            # Generate token using the class method
+            raw_token, obj = StaffToken.create_token(
+                label=obj.label,
+                expires_at=obj.expires_at
+            )
+
+            # Store raw token temporarily for display
+            obj._raw_token = raw_token
+
+            # Add success message with token
+            from django.contrib import messages
+            messages.success(
+                request,
+                f'Staff token created successfully! '
+                f'Token: {raw_token} '
+                f'(Save this token - it will not be shown again!)'
+            )
+        else:
+            super().save_model(request, obj, form, change)
+
     def deactivate_tokens(self, request, queryset):
         """Deactivate tokens"""
         updated = queryset.update(active=False)
         self.message_user(request, f'{updated} tokens deactivated.')
     deactivate_tokens.short_description = "Deactivate selected tokens"
-    
+
     def activate_tokens(self, request, queryset):
         """Activate tokens"""
         updated = queryset.update(active=True)

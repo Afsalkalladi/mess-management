@@ -515,39 +515,45 @@ QR Version: {student.qr_version}
         user = update.effective_user
         
         if user.id not in self.admin_ids:
-            await query.message.reply_text("Unauthorized")
+            await query.edit_message_text("Unauthorized")
             return
-        
+
         if data == 'admin_registrations':
             # Show pending registrations
             pending = await sync_to_async(list)(Student.objects.filter(status=StudentStatus.PENDING))
-            
+
             if not pending:
-                await query.message.reply_text("No pending registrations")
+                await query.edit_message_text("No pending registrations")
                 return
             
-            for student in pending[:5]:  # Show max 5 at a time
-                keyboard = [
-                    [
-                        InlineKeyboardButton("✅ Approve", callback_data=f'approve_{student.id}'),
-                        InlineKeyboardButton("❌ Deny", callback_data=f'deny_{student.id}')
-                    ]
-                ]
-                reply_markup = InlineKeyboardMarkup(keyboard)
-                
-                text = f"""
-**Pending Registration**
-Name: {student.name}
-Roll: {student.roll_no}
-Room: {student.room_no}
-Phone: {student.phone}
-                """
-                
-                await query.message.reply_text(
-                    text,
-                    reply_markup=reply_markup,
-                    parse_mode='Markdown'
-                )
+            # Show first pending registration
+            student = pending[0]
+            keyboard = [
+                [
+                    InlineKeyboardButton("✅ Approve", callback_data=f'approve_{student.id}'),
+                    InlineKeyboardButton("❌ Deny", callback_data=f'deny_{student.id}')
+                ],
+                [InlineKeyboardButton("🔙 Back to Admin", callback_data='admin')]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            text = f"""
+👥 **Pending Registration** ({len(pending)} total)
+
+**Name:** {student.name}
+**Roll:** {student.roll_no}
+**Room:** {student.room_no}
+**Phone:** {student.phone}
+**Registered:** {student.created_at.strftime('%Y-%m-%d %H:%M')}
+
+Choose an action:
+            """
+
+            await query.edit_message_text(
+                text,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
         
         elif data.startswith('approve_') or data.startswith('deny_'):
             # Process approval/denial
@@ -573,7 +579,45 @@ Phone: {student.phone}
                 send_telegram_notification.delay(student.tg_user_id, message)
             
             await sync_to_async(student.save)()
-            await query.message.reply_text(f"Student {action}d successfully")
+            await query.edit_message_text(f"Student {action}d successfully")
+
+        elif data == 'admin_payments':
+            await query.edit_message_text(
+                "💰 **Payment Management**\n\nPayment verification features coming soon!",
+                parse_mode='Markdown'
+            )
+
+        elif data == 'admin_stats':
+            # Get basic stats
+            total_students = await sync_to_async(Student.objects.count)()
+            pending_students = await sync_to_async(Student.objects.filter(status=StudentStatus.PENDING).count)()
+            approved_students = await sync_to_async(Student.objects.filter(status=StudentStatus.APPROVED).count)()
+
+            stats_text = f"""
+📊 **System Statistics**
+
+👥 **Students:**
+• Total: {total_students}
+• Pending: {pending_students}
+• Approved: {approved_students}
+
+🔙 Use the back button to return to admin panel.
+            """
+
+            keyboard = [[InlineKeyboardButton("🔙 Back to Admin", callback_data='admin')]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+
+            await query.edit_message_text(
+                stats_text,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+
+        elif data == 'admin_settings':
+            await query.edit_message_text(
+                "🔧 **System Settings**\n\nSettings management features coming soon!",
+                parse_mode='Markdown'
+            )
     
     async def handle_photo(self, update: Update, context):
         """Handle photo uploads (for payments)"""

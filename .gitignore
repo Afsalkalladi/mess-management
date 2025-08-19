@@ -118,3 +118,5 @@ token.json
 # Production
 *.production
 production.py
+
+*.md
